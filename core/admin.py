@@ -4,6 +4,8 @@ from django.utils.formats import number_format
 from core.forms import DoacaoFormAdmin
 
 from .models import Campanha, Contribuinte, Contribuinte, Doador, Doacao
+from django.urls import reverse
+from django.utils.html import format_html
 
 admin.site.site_header = "Administração Campanhas"
 admin.site.site_title = "Administração Campanhas"
@@ -33,9 +35,14 @@ class DoacaoAdmin(admin.ModelAdmin):
 
 
 class ContribuinteAdmin(admin.ModelAdmin):
-    list_display = ('doador', 'campanha',)
+    list_display = ('doador', 'campanha', 'contribuicoes')
     search_fields = ('doador__nome', 'campanha__nome')
-    list_filter = ('campanha',)    
+    list_filter = ('campanha',)
+    
+    def contribuicoes(self, obj):
+        url = reverse('admin:core_doacao_changelist') + f'?contribuinte__id__exact={obj.id}'
+        return format_html('<a href="{}">Ver contribuições</a>', url)
+    contribuicoes.short_description = 'Contribuições'
 
 
 class DoadorAdmin(admin.ModelAdmin):
