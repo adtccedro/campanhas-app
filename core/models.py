@@ -29,7 +29,7 @@ class Doador(ModelAbstract):
     congregacao = models.CharField(max_length=255, verbose_name="Congregação", null=True, blank=True)
     
     def __str__(self):
-        return f"{self.nome} - {self.email}"
+        return f"{self.nome} - {self.congregacao}"
     
     class Meta:
         verbose_name = "Doador"
@@ -49,11 +49,7 @@ class Contribuinte(ModelAbstract):
         return f"{self.doador.nome} - {self.doador.congregacao}"
     
     
-class Doacao(ModelAbstract):
-    class Meta:
-        verbose_name = "Doação"
-        verbose_name_plural = "Doações"
-    
+class Doacao(ModelAbstract):        
     class MeioPagamento(models.TextChoices):
         DINHEIRO = 'DINHEIRO', 'Dinheiro'
         PIX = 'PIX', 'PIX'
@@ -74,3 +70,5 @@ class Doacao(ModelAbstract):
     
     class Meta:
         ordering = ['-ano', 'mes']
+        verbose_name = "Doação"
+        verbose_name_plural = "Doações"

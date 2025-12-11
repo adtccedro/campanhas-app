@@ -23,6 +23,9 @@ class DoacaoAdmin(admin.ModelAdmin):
     autocomplete_fields = ('contribuinte', )
     form = DoacaoFormAdmin
     
+    def lookup_allowed(self, lookup, value):
+        return super().lookup_allowed(lookup, value) or lookup == 'contribuinte__campanha'
+    
     def get_valor(self, obj):
         return f"R$ {number_format(obj.valor, 2)}"
     get_valor.short_description = 'Valor'
@@ -30,9 +33,9 @@ class DoacaoAdmin(admin.ModelAdmin):
 
 
 class ContribuinteAdmin(admin.ModelAdmin):
-    list_display = ('doador',)
+    list_display = ('doador', 'campanha',)
     search_fields = ('doador__nome', 'campanha__nome')
-    list_filter = ('campanha',)
+    list_filter = ('campanha',)    
 
 
 class DoadorAdmin(admin.ModelAdmin):
