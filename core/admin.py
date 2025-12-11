@@ -8,6 +8,9 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.admin.views.main import ChangeList
 from django.db.models import Sum, Count
+from dateutil.relativedelta import relativedelta
+from django.db.models import F, OuterRef, Subquery, Count, Q, IntegerField, Value, Case, When
+from django.db.models.functions import ExtractYear, ExtractMonth
 
 admin.site.site_header = "Administração Campanhas"
 admin.site.site_title = "Administração Campanhas"
@@ -61,15 +64,100 @@ class DoacaoAdmin(admin.ModelAdmin):
         return rs
 
 
+class StatusListFilter(admin.SimpleListFilter):
+    title = 'Status'
+    parameter_name = 'status'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('pendente', 'Pendente'),
+            ('parcial', 'Parcial'),
+            ('completo', 'Completo'),
+            ('indefinido', 'Indefinido'),
+        ]
+
+    def queryset(self, request, queryset):
+
+        # Annotate each Contribuinte with meses_contribuidos and total_months
+        qs = queryset.annotate(
+            data_inicio=F('campanha__data_inicio'),
+            data_fim=F('campanha__data_fim'),
+        ).annotate(
+            total_months=Case(
+                When(
+                    Q(data_inicio__isnull=False) & Q(data_fim__isnull=False),
+                    then=(
+                    (ExtractYear('data_fim') - ExtractYear('data_inicio')) * 12 +
+                    (ExtractMonth('data_fim') - ExtractMonth('data_inicio')) + 1
+                    )
+                ),
+                default=Value(0),
+                output_field=IntegerField()
+            ),
+            meses_contribuidos=Subquery(
+                Doacao.objects.filter(
+                    contribuinte_id=OuterRef('pk')
+                ).values('contribuinte_id')
+                .annotate(
+                    count=Count('mes', distinct=True)
+                ).values('count'),
+                output_field=IntegerField()
+            )
+        )
+
+        value = self.value()
+        if value == 'indefinido':
+            return qs.filter(Q(data_inicio__isnull=True) | Q(data_fim__isnull=True))
+        if value == 'pendente':
+            return qs.filter(
+                Q(data_inicio__isnull=False) & Q(data_fim__isnull=False),
+                Q(doacoes__isnull=True) | Q(meses_contribuidos=0)
+            )
+        if value == 'completo':
+            return qs.filter(
+                Q(data_inicio__isnull=False) & Q(data_fim__isnull=False),
+                meses_contribuidos__gte=F('total_months')
+            )
+        if value == 'parcial':
+            return qs.filter(
+                Q(data_inicio__isnull=False) & Q(data_fim__isnull=False),
+                meses_contribuidos__gt=0,
+                meses_contribuidos__lt=F('total_months')
+            )
+        return qs
+    
 class ContribuinteAdmin(admin.ModelAdmin):
-    list_display = ('doador', 'campanha', 'contribuicoes')
+    list_display = ('doador', 'status', 'contribuicoes', 'campanha',)
     search_fields = ('doador__nome', 'campanha__nome')
-    list_filter = ('campanha',)
+    list_filter = ('campanha', StatusListFilter)
     
     def contribuicoes(self, obj):
         url = reverse('admin:core_doacao_changelist') + f'?contribuinte__id__exact={obj.id}'
         return format_html('<a href="{}">Ver contribuições</a>', url)
     contribuicoes.short_description = 'Contribuições'
+    
+
+        
+    def status(self, obj):
+        campanha = obj.campanha
+        if not campanha.data_inicio or not campanha.data_fim:
+            return "Indefinido"
+        # Calcula o total de meses da campanha
+        total_months = (campanha.data_fim.year - campanha.data_inicio.year) * 12 + (campanha.data_fim.month - campanha.data_inicio.month) + 1
+
+        # Conta quantos meses o contribuinte já contribuiu (considerando doações únicas por mês)
+        meses_contribuidos = obj.doacoes.values('ano', 'mes').distinct().count()
+
+        # Determina status
+        if meses_contribuidos == 0:
+            status = "Pendente"
+        elif meses_contribuidos >= total_months:
+            status = "Completo"
+        else:
+            status = "Parcial"
+
+        return f"{status} ({meses_contribuidos}/{total_months})"
+    status.short_description = 'Status'
 
 
 class DoadorAdmin(admin.ModelAdmin):
