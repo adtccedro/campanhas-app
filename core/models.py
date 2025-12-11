@@ -19,36 +19,53 @@ class Campanha(ModelAbstract):
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
     
     def __str__(self):
-        return self.nome        
+        return self.nome
 
 
 class Doador(ModelAbstract):
     nome = models.CharField(max_length=255, verbose_name="Nome do Doador")
-    email = models.EmailField(verbose_name="Email do Doador")
+    email = models.EmailField(verbose_name="Email do Doador", null=True, blank=True)
+    telefone = models.CharField(max_length=20, verbose_name="Telefone do Doador", null=True, blank=True)
+    congregacao = models.CharField(max_length=255, verbose_name="Congregação", null=True, blank=True)
     
     def __str__(self):
         return f"{self.nome} - {self.email}"
+    
+    class Meta:
+        verbose_name = "Doador"
+        verbose_name_plural = "Doadores"
 
 
-class CamanhaDoador(ModelAbstract):
+class Contribuinte(ModelAbstract):
     campanha = models.ForeignKey(
-        Campanha, on_delete=models.CASCADE, related_name="camapanha_doador", verbose_name="Campanha")
+        Campanha, on_delete=models.CASCADE, related_name="campanha_doador", verbose_name="Campanha")
     doador = models.ForeignKey(
-        Doador, on_delete=models.CASCADE, related_name="doadores", verbose_name="Doador")
+        Doador, on_delete=models.CASCADE, related_name="doadores", verbose_name="Contribuinte")
     
     class Meta:
         unique_together = ('campanha', 'doador')
     
     def __str__(self):
-        return f"{self.doador.nome} - {self.doador.email}"
+        return f"{self.doador.nome} - {self.doador.congregacao}"
     
     
 class Doacao(ModelAbstract):
-    doador = models.ForeignKey(
-        CamanhaDoador, on_delete=models.CASCADE, related_name="doacoes", verbose_name="Campanha")    
+    class Meta:
+        verbose_name = "Doação"
+        verbose_name_plural = "Doações"
+    
+    class MeioPagamento(models.TextChoices):
+        DINHEIRO = 'DINHEIRO', 'Dinheiro'
+        PIX = 'PIX', 'PIX'
+    
+    contribuinte = models.ForeignKey(
+        Contribuinte, on_delete=models.CASCADE, related_name="doacoes", verbose_name="Contribuinte")
     valor = models.DecimalField(
         max_digits=10, decimal_places=2, verbose_name="Valor da Doação")
     data_doacao = models.DateField(verbose_name="Data da Doação")
+    metodo = models.CharField(
+        max_length=100, verbose_name="Método de Pagamento", choices=MeioPagamento.choices, 
+        default=MeioPagamento.DINHEIRO)
     
     def __str__(self):
-        return f"{self.doador.doador.nome} - {self.valor}"
+        return f"{self.contribuinte.doador.nome} - {self.valor}"
