@@ -1,4 +1,7 @@
 from django.contrib import admin
+from django.utils.formats import number_format
+
+from core.forms import DoacaoFormAdmin
 
 from .models import Campanha, Contribuinte, Contribuinte, Doador, Doacao
 
@@ -14,10 +17,16 @@ class CampanhaAdmin(admin.ModelAdmin):
 
 
 class DoacaoAdmin(admin.ModelAdmin):
-    list_display = ('contribuinte', 'valor', 'metodo', 'data_doacao', 'created_at', 'updated_at')
+    list_display = ('contribuinte', 'get_valor', 'metodo', 'data_doacao', 'mes', 'ano')
     search_fields = ('contribuinte__doador__nome',)
     list_filter = ('metodo', 'data_doacao')
-    autocomplete_fields = ('contribuinte', )   
+    autocomplete_fields = ('contribuinte', )
+    form = DoacaoFormAdmin
+    
+    def get_valor(self, obj):
+        return f"R$ {number_format(obj.valor, 2)}"
+    get_valor.short_description = 'Valor'
+    get_valor.admin_order_field = 'valor'
 
 
 class ContribuinteAdmin(admin.ModelAdmin):
@@ -33,6 +42,5 @@ class DoadorAdmin(admin.ModelAdmin):
 
 admin.site.register(Campanha, CampanhaAdmin)
 admin.site.register(Doador, DoadorAdmin)
-# admin.site.register(CampanhaDoador)
 admin.site.register(Doacao, DoacaoAdmin)
 admin.site.register(Contribuinte, ContribuinteAdmin)

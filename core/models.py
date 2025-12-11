@@ -66,6 +66,11 @@ class Doacao(ModelAbstract):
     metodo = models.CharField(
         max_length=100, verbose_name="Método de Pagamento", choices=MeioPagamento.choices, 
         default=MeioPagamento.DINHEIRO)
+    mes = models.IntegerField(verbose_name="Mês da Doação", null=True, blank=True)
+    ano = models.IntegerField(verbose_name="Ano da Doação", null=True, blank=True)
     
     def __str__(self):
         return f"{self.contribuinte.doador.nome} - {self.valor}"
+    
+    class Meta:
+        ordering = ['-ano', 'mes']
