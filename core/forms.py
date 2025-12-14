@@ -6,6 +6,24 @@ from core.models import Doacao, Doador, Campanha
 from datetime import date
 from decimal import Decimal
 
+
+class DoadorAdminForm(forms.ModelForm):
+    congregacao_fk = forms.ModelChoiceField(
+        queryset=Doador._meta.get_field('congregacao_fk').remote_field.model.objects.all(),
+        widget=AutocompleteSelect(
+                Doador._meta.get_field('congregacao_fk'),
+                admin.site,
+                attrs={'data-autocomplete-light-function': 'select2'}
+            ),
+        required=True,
+        label="Congregação",
+    )
+
+    class Meta:
+        model = Doador
+        fields = '__all__'
+
+
 class DoacaoFormAdmin(forms.ModelForm):    
     valor = forms.CharField(widget=forms.TextInput(attrs={'class': 'vTextField money'}))
     

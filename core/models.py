@@ -29,6 +29,10 @@ class Congregacao(ModelAbstract):
     def __str__(self):
         return self.nome
     
+    class Meta:
+        verbose_name = 'Congregação'
+        verbose_name_plural = 'Congregações'
+    
 
 class Doador(ModelAbstract):
     nome = models.CharField(max_length=255, verbose_name="Nome do Doador")

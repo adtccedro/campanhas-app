@@ -1,9 +1,9 @@
 from django.contrib import admin
 from django.utils.formats import number_format
 
-from core.forms import DoacaoFormAdmin
+from core.forms import DoacaoFormAdmin, DoadorAdminForm
 
-from .models import Campanha, Contribuinte, Doador, Doacao
+from .models import Campanha, Congregacao, Contribuinte, Doador, Doacao
 from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.admin.views.main import ChangeList
@@ -165,9 +165,14 @@ class DoadorAdmin(admin.ModelAdmin):
     search_fields = ('nome', 'email')
     list_display = ('nome', 'email', 'telefone', 'congregacao_fk', 'created_at')
     exclude = ('congregacao',)
+    form = DoadorAdminForm
+
+class CongregacaoAdmin(admin.ModelAdmin):
+    search_fields = ('nome',)        
 
 
 admin.site.register(Campanha, CampanhaAdmin)
 admin.site.register(Doador, DoadorAdmin)
 admin.site.register(Doacao, DoacaoAdmin)
 admin.site.register(Contribuinte, ContribuinteAdmin)
+admin.site.register(Congregacao, CongregacaoAdmin)
