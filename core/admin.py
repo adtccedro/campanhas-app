@@ -26,7 +26,7 @@ class CampanhaAdmin(admin.ModelAdmin):
 class DoacaoAdmin(admin.ModelAdmin):
     list_display = ('contribuinte', 'get_valor', 'metodo', 'data_doacao', 'mes', 'ano')
     search_fields = ('contribuinte__doador__nome',)
-    list_filter = ('metodo', 'data_doacao')
+    list_filter = ('metodo', 'data_doacao', 'contribuinte__doador__congregacao_fk', 'contribuinte__campanha')
     autocomplete_fields = ('contribuinte', )
     form = DoacaoFormAdmin
     
@@ -129,7 +129,8 @@ class StatusListFilter(admin.SimpleListFilter):
 class ContribuinteAdmin(admin.ModelAdmin):
     list_display = ('doador', 'status', 'contribuicoes', 'campanha',)
     search_fields = ('doador__nome', 'campanha__nome')
-    list_filter = ('campanha', StatusListFilter)
+    list_filter = ('campanha', StatusListFilter, 'doador__congregacao_fk',)
+    autocomplete_fields = ('doador', 'campanha')
     
     def contribuicoes(self, obj):
         url = reverse('admin:core_doacao_changelist') + f'?contribuinte__id__exact={obj.id}'
@@ -162,7 +163,8 @@ class ContribuinteAdmin(admin.ModelAdmin):
 
 class DoadorAdmin(admin.ModelAdmin):
     search_fields = ('nome', 'email')
-    list_display = ('nome', 'email', 'telefone', 'congregacao', 'created_at')
+    list_display = ('nome', 'email', 'telefone', 'congregacao_fk', 'created_at')
+    exclude = ('congregacao',)
 
 
 admin.site.register(Campanha, CampanhaAdmin)

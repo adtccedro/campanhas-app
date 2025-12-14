@@ -22,11 +22,22 @@ class Campanha(ModelAbstract):
         return self.nome
 
 
+class Congregacao(ModelAbstract):
+    nome = models.CharField(max_length=255, verbose_name="Nome da Congregação")
+    endereco = models.CharField(max_length=255, verbose_name="Endereço", null=True, blank=True)
+    
+    def __str__(self):
+        return self.nome
+    
+
 class Doador(ModelAbstract):
     nome = models.CharField(max_length=255, verbose_name="Nome do Doador")
     email = models.EmailField(verbose_name="Email do Doador", null=True, blank=True)
     telefone = models.CharField(max_length=20, verbose_name="Telefone do Doador", null=True, blank=True)
     congregacao = models.CharField(max_length=255, verbose_name="Congregação", null=True, blank=True)
+    congregacao_fk = models.ForeignKey(
+        Congregacao, on_delete=models.SET_NULL, related_name="doadores", 
+        verbose_name="Congregação", null=True, blank=True)
     
     def __str__(self):
         return f"{self.nome} - {self.congregacao}"
