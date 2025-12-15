@@ -44,7 +44,7 @@ class Doador(ModelAbstract):
         verbose_name="Congregação", null=True, blank=True)
     
     def __str__(self):
-        return f"{self.nome} - {self.congregacao}"
+        return f"{self.nome} - {self.congregacao_fk}"
     
     class Meta:
         verbose_name = "Doador"
