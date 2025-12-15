@@ -81,6 +81,8 @@ class Doacao(ModelAbstract):
     ano = models.IntegerField(verbose_name="Ano da Doação", null=True, blank=True)
     prestado_contas = models.BooleanField(
         default=False, verbose_name="Prestado Contas")
+    recebido_por = models.CharField(
+        max_length=255, verbose_name="Recebido Por", null=True, blank=True)
     
     def __str__(self):
         return f"{self.contribuinte.doador.nome} - {self.valor}"

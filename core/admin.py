@@ -17,14 +17,20 @@ admin.site.site_title = "Administração Campanhas"
 admin.site.index_title = "Administração Campanhas"
 
 
+class ContribuinteInline(admin.TabularInline):
+    model = Contribuinte
+    extra = 0
+    autocomplete_fields = ('doador',)
+
 class CampanhaAdmin(admin.ModelAdmin):
     list_display = ('nome', 'data_inicio', 'data_fim', 'ativo', 'created_at', 'updated_at')
     search_fields = ('nome',)
     list_filter = ('ativo', 'data_inicio', 'data_fim')
+    inlines = [ContribuinteInline]
 
 
 class DoacaoAdmin(admin.ModelAdmin):
-    list_display = ('contribuinte', 'get_valor', 'metodo', 'data_doacao', 'mes', 'ano')
+    list_display = ('contribuinte', 'get_valor', 'metodo', 'data_doacao', 'data_referencia', 'prestado_contas', 'recebido_por')
     search_fields = ('contribuinte__doador__nome',)
     list_filter = ('metodo', 'data_doacao', 'contribuinte__doador__congregacao_fk', 'contribuinte__campanha', 'prestado_contas')
     autocomplete_fields = ('contribuinte', )
@@ -34,6 +40,7 @@ class DoacaoAdmin(admin.ModelAdmin):
     def mark_as_prestado_contas(self, request, queryset):
         updated_count = queryset.update(prestado_contas=True)
         self.message_user(request, f"{updated_count} doações marcadas como 'Prestado Contas'.")
+        return {'success': f"{updated_count} doações marcadas como 'Prestado Contas'."}
     mark_as_prestado_contas.short_description = "Marcar doações selecionadas como 'Prestado Contas'"
     
     
@@ -44,6 +51,10 @@ class DoacaoAdmin(admin.ModelAdmin):
         return f"R$ {number_format(obj.valor, 2)}"
     get_valor.short_description = 'Valor'
     get_valor.admin_order_field = 'valor'
+    
+    def data_referencia(self, obj):
+        return f"{obj.mes}/{obj.ano}"
+    data_referencia.short_description = 'Data Referência'
 
     def changelist_view(self, request, extra_context=None):
         """Compute aggregates (sum of `valor` and count) for the changelist queryset
@@ -54,7 +65,10 @@ class DoacaoAdmin(admin.ModelAdmin):
         # Use a custom change_list template located in app templates to render totals
         self.change_list_template = 'admin/core/doacao/change_list.html'
         rs = super().changelist_view(request, extra_context=extra_context)
-        
+        if getattr(rs, 'context_data', None) is None:
+            return rs  # avoid errors if context_data is not present
+        if rs.context_data.get('cl') is None:
+            return rs  # avoid errors if cl is not present
         qs = rs.context_data.get('cl').queryset
         # Use the queryset (qs) that already has filters/search applied
         totals = qs.aggregate(total_valor=Sum('valor'), total_count=Count('pk'))
