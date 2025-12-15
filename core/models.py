@@ -61,7 +61,7 @@ class Contribuinte(ModelAbstract):
         unique_together = ('campanha', 'doador')
     
     def __str__(self):
-        return f"{self.doador.nome} - {self.doador.congregacao}"
+        return f"{self.doador} - {self.campanha}"
     
     
 class Doacao(ModelAbstract):        
