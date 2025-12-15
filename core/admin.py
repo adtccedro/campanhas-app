@@ -26,9 +26,16 @@ class CampanhaAdmin(admin.ModelAdmin):
 class DoacaoAdmin(admin.ModelAdmin):
     list_display = ('contribuinte', 'get_valor', 'metodo', 'data_doacao', 'mes', 'ano')
     search_fields = ('contribuinte__doador__nome',)
-    list_filter = ('metodo', 'data_doacao', 'contribuinte__doador__congregacao_fk', 'contribuinte__campanha')
+    list_filter = ('metodo', 'data_doacao', 'contribuinte__doador__congregacao_fk', 'contribuinte__campanha', 'prestado_contas')
     autocomplete_fields = ('contribuinte', )
     form = DoacaoFormAdmin
+    actions = ['mark_as_prestado_contas']
+    
+    def mark_as_prestado_contas(self, request, queryset):
+        updated_count = queryset.update(prestado_contas=True)
+        self.message_user(request, f"{updated_count} doações marcadas como 'Prestado Contas'.")
+    mark_as_prestado_contas.short_description = "Marcar doações selecionadas como 'Prestado Contas'"
+    
     
     def lookup_allowed(self, lookup, value):
         return super().lookup_allowed(lookup, value) or lookup == 'contribuinte__campanha'
