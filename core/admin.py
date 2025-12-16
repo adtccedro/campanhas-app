@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.formats import number_format
 
+from core.actions import report_action
 from core.forms import DoacaoFormAdmin, DoadorAdminForm
 
 from .models import Campanha, Congregacao, Contribuinte, Doador, Doacao
@@ -11,6 +12,7 @@ from django.db.models import Sum, Count
 from dateutil.relativedelta import relativedelta
 from django.db.models import F, OuterRef, Subquery, Count, Q, IntegerField, Value, Case, When
 from django.db.models.functions import ExtractYear, ExtractMonth
+from poweradmin.admin import PowerModelAdmin
 
 admin.site.site_header = "Administração Campanhas"
 admin.site.site_title = "Administração Campanhas"
@@ -29,13 +31,14 @@ class CampanhaAdmin(admin.ModelAdmin):
     inlines = [ContribuinteInline]
 
 
-class DoacaoAdmin(admin.ModelAdmin):
+class DoacaoAdmin(PowerModelAdmin):
     list_display = ('contribuinte', 'get_valor', 'metodo', 'data_doacao', 'data_referencia', 'prestado_contas', 'recebido_por')
     search_fields = ('contribuinte__doador__nome',)
     list_filter = ('metodo', 'data_doacao', 'contribuinte__doador__congregacao_fk', 'contribuinte__campanha', 'prestado_contas')
     autocomplete_fields = ('contribuinte', )
     form = DoacaoFormAdmin
     actions = ['mark_as_prestado_contas']
+    list_report = ['contribuinte__doador__nome', 'contribuinte__doador__congregacao_fk', 'metodo', 'data_doacao', 'data_referencia', 'get_valor', ]
     
     def mark_as_prestado_contas(self, request, queryset):
         updated_count = queryset.update(prestado_contas=True)
@@ -84,6 +87,14 @@ class DoacaoAdmin(admin.ModelAdmin):
         rs.context_data.update(extra_context)        
         return rs
 
+    
+    def get_actions(self, request):
+        actions = super(DoacaoAdmin, self).get_actions(request)        
+        # Report
+        report = report_action(fields=self.get_list_report(request), title=self.get_header_report(request), template_name='admin/core/doacao/report.html', field_sum='valor')
+        actions['report'] = (report, 'report', report.short_description)
+
+        return actions
 
 class StatusListFilter(admin.SimpleListFilter):
     title = 'Status'
@@ -95,6 +106,7 @@ class StatusListFilter(admin.SimpleListFilter):
             ('parcial', 'Parcial'),
             ('completo', 'Completo'),
             ('indefinido', 'Indefinido'),
+            ('iniciados', 'Iniciados'),
         ]
 
     def queryset(self, request, queryset):
@@ -145,20 +157,40 @@ class StatusListFilter(admin.SimpleListFilter):
                 meses_contribuidos__gt=0,
                 meses_contribuidos__lt=F('total_months')
             )
+        if value == 'iniciados':
+            return qs.filter(
+                Q(data_inicio__isnull=False) & Q(data_fim__isnull=False),
+                meses_contribuidos__gt=0
+            )
         return qs
     
-class ContribuinteAdmin(admin.ModelAdmin):
-    list_display = ('doador', 'status', 'contribuicoes', 'campanha',)
+class ContribuinteAdmin(PowerModelAdmin):
+    list_display = ('doador', 'status', 'contribuicoes', 'total_contribuido', 'campanha',)
     search_fields = ('doador__nome', 'campanha__nome')
     list_filter = ('campanha', StatusListFilter, 'doador__congregacao_fk',)
     autocomplete_fields = ('doador', 'campanha')
+    list_report = ['contribuinte_display', 'congregacao_display', 'status_report', 'total_contribuido', ]
     
     def contribuicoes(self, obj):
         url = reverse('admin:core_doacao_changelist') + f'?contribuinte__id__exact={obj.id}'
         return format_html('<a href="{}">Ver contribuições</a>', url)
     contribuicoes.short_description = 'Contribuições'
     
+    def get_actions(self, request):
+        actions = super(ContribuinteAdmin, self).get_actions(request)
+        title = self.get_header_report(request)
+        if request.GET.get('campanha__id__exact'):
+            campanha = Campanha.objects.get(id=request.GET.get('campanha__id__exact'))
+            title = f'<h1>Contribuintes da Campanha: {campanha.nome}</h1>'
+        
+        report = report_action(fields=self.get_list_report(request), title=title, template_name='admin/core/doacao/report.html', field_sum='doacoes__valor')
+        actions['report'] = (report, 'report', report.short_description)
+        return actions
 
+    def total_contribuido(self, obj):
+        total = obj.doacoes.aggregate(total=Sum('valor'))['total'] or 0
+        return f"R$ {number_format(total, 2)}"
+    total_contribuido.short_description = 'Total Contribuído'
         
     def status(self, obj):
         campanha = obj.campanha
@@ -180,7 +212,26 @@ class ContribuinteAdmin(admin.ModelAdmin):
 
         return f"{status} ({meses_contribuidos}/{total_months})"
     status.short_description = 'Status'
+    
+    def status_report(self, obj):
+        campanha = obj.campanha        
+        total_months = (campanha.data_fim.year - campanha.data_inicio.year) * 12 + (campanha.data_fim.month - campanha.data_inicio.month) + 1        
+        meses_contribuidos = obj.doacoes.values('ano', 'mes').distinct().count()        
+        if meses_contribuidos >= total_months:
+            status = "Completo"
+        else:
+            status = "Iniciado"            
 
+        return f"{status} ({meses_contribuidos}/{total_months})"
+    status_report.short_description = 'Status'
+    
+    def congregacao_display(self, obj):
+        return obj.doador.congregacao_fk
+    congregacao_display.short_description = 'Congregação'
+    
+    def contribuinte_display(self, obj):
+        return obj.doador.nome
+    contribuinte_display.short_description = 'Contribuinte'
 
 class DoadorAdmin(admin.ModelAdmin):
     search_fields = ('nome', 'email')

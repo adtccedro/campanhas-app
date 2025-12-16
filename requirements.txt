@@ -6,3 +6,4 @@ python-dotenv==1.0.1
 sqlparse==0.5.3
 sentry-sdk[django]
 python-dateutil
+poweradmin @ git+https://bitbucket.org/josir/poweradmin.git@django52

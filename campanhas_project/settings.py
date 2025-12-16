@@ -54,6 +54,7 @@ ALLOWED_HOSTS = [".vercel.app", ".now.sh", '127.0.0.1', 'localhost', '.ngrok-fre
 # Application definition
 
 INSTALLED_APPS = [
+    'poweradmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -137,6 +138,10 @@ TIME_ZONE = 'America/Fortaleza'
 USE_I18N = True
 
 USE_TZ = True
+
+DATE_INPUT_FORMATS = '%d/%m/%Y'
+DATE_TIME_INPUT_FORMATS = '%d/%m/%Y %H:%m'
+USE_L10N = True
 
 # USE_THOUSAND_SEPARATOR = True
 # Static files (CSS, JavaScript, Images)
